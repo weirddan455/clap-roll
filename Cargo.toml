@@ -1,0 +1,15 @@
+[package]
+name = "clap-roll"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dirs = "5.0.1"
+hex-literal = "0.4.1"
+rubato = "0.16.1"
+sha2 = "0.10.8"
+symphonia = { version = "0.5.4", default-features = false, features = ["ogg", "vorbis"] }
+ureq = "2.12.1"
