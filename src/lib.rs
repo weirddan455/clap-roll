@@ -5,6 +5,7 @@ use std::io::Read;
 use std::ops::DerefMut;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
+use std::thread::JoinHandle;
 use std::ptr;
 
 use hex_literal::hex;
@@ -54,6 +55,12 @@ extern "C" fn entry_init(_plugin_path: *const c_char) -> bool {
 }
 
 extern "C" fn entry_deinit() {
+    if let Ok(mut meme_guard) = MEME_THREAD.lock() {
+        let maybe_thread = std::mem::replace(meme_guard.deref_mut(), None);
+        if let Some(thread) = maybe_thread {
+            let _ = thread.join();
+        }
+    }
 }
 
 extern "C" fn get_factory(_factory_id: *const c_char) -> *const ClapPluginFactory {
@@ -266,10 +273,14 @@ extern "C" fn plugin_destroy(plugin: *const ClapPlugin) {
     }
 }
 
+static MEME_THREAD: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
+
 extern "C" fn plugin_activate(plugin_ptr: *const ClapPlugin, sample_rate: c_double, _min_frames_count: u32, _max_frames_count: u32) -> bool {
     static SPAWN_THREAD: AtomicBool = AtomicBool::new(true);
     if SPAWN_THREAD.fetch_and(false, Ordering::Relaxed) {
-        std::thread::spawn(get_meme);
+        if let Ok(mut meme_guard) = MEME_THREAD.lock() {
+            *meme_guard = Some(std::thread::spawn(get_meme));
+        }
     }
     let plugin = unsafe{&*plugin_ptr};
     let mutex = unsafe{&*plugin.meme_stream};
